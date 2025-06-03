@@ -1,4 +1,4 @@
 pandas
-nfl-data-py
+nfl-data-py==0.3.3
 streamlit
 matplotlib
