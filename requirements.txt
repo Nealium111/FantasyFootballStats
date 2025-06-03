@@ -1,4 +1,4 @@
 pandas
-nfl-data-py
+nfl_data_py
 streamlit
 matplotlib
