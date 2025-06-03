@@ -297,7 +297,7 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
         age_factor = max(0, min(1, (35 - age) / (35 - 21)))
 
     # Rookie baseline for no value players
-    rookie_baseline_value = 20
+    rookie_baseline_value = 100
 
     if total_value == 0:
         rating = rookie_baseline_value * age_factor
