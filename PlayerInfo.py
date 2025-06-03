@@ -238,10 +238,10 @@ st.header("Dynasty Trade Calculator")
 
 # Draft pick values (example scale, adjust as needed)
 draft_pick_values = {
-    'Draft Pick: 1st Round': 225,
-    'Draft Pick: 2nd Round': 130,
-    'Draft Pick: 3rd Round': 100,
-    'Draft Pick: 4th Round': 50,
+    'Draft Pick: 1st Round': 200,
+    'Draft Pick: 2nd Round': 100,
+    'Draft Pick: 3rd Round': 50,
+    'Draft Pick: 4th Round': 25,
 }
 
 # Combined player + picks list for dropdown
