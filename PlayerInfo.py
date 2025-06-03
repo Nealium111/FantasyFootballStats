@@ -294,7 +294,7 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
     else:
         birth_date = pd.to_datetime(player_row.iloc[0]['birth_date'])
         age = (datetime.datetime.now() - birth_date).days / 365.25
-        age_factor = max(0, min(1, (40 - age) / (40 - 21)))
+        age_factor = max(0, min(1, (35 - age) / (35 - 21)))
 
     # Rookie baseline for no value players
     rookie_baseline_value = 20
