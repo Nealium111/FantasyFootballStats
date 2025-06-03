@@ -240,8 +240,8 @@ st.header("Dynasty Trade Calculator")
 draft_pick_values = {
     'Draft Pick: 1st Round': 50,
     'Draft Pick: 2nd Round': 30,
-    'Draft Pick: 3rd Round': 15,
-    'Draft Pick: 4th Round': 7,
+    'Draft Pick: 3rd Round': 10,
+    'Draft Pick: 4th Round': 5,
 }
 
 # Combined player + picks list for dropdown
@@ -377,9 +377,6 @@ if st.button("Calculate Trade Values"):
     st.write(f"**Trade Side A Value:** {value_a:.1f}")
     st.write(f"**Trade Side B Value:** {value_b:.1f}")
 
-    st.write(f"**Trade Side A Value:** {value_a:.1f}")
-    st.write(f"**Trade Side B Value:** {value_b:.1f}")
-
 
     diff = value_a - value_b
     if abs(diff) < 10:
@@ -390,7 +387,7 @@ if st.button("Calculate Trade Values"):
         st.warning("Side B is giving more value.")
 
     st.markdown("---")
-    st.subheader("Details for Trade Side A")
+    st.subheader("Details for Trade")
 
     def safe_format(x, fmt):
         if x is None:
