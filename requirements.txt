@@ -1,3 +1,4 @@
 pandas
 nfl_data_py
 streamlit
+matplotlib
