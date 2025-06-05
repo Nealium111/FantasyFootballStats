@@ -13,6 +13,11 @@ years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[202
 def load_pbp(years):
     return nfl.import_pbp_data(years)
 
+@st.cache_data
+def load_full_career_pbp():
+    all_years = list(range(2015, 2025))  # Adjust range if needed
+    return nfl.import_pbp_data(all_years)
+
 if years:
     pbp = load_pbp(years)
 else:
