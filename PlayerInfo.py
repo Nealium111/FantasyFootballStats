@@ -14,9 +14,16 @@ def load_pbp(years):
     return nfl.import_pbp_data(years)
 
 @st.cache_data
-def load_full_career_pbp():
-    all_years = list(range(2015, 2025))  # Adjust range if needed
-    return nfl.import_pbp_data(all_years)
+def load_player_career_pbp(player_id, players):
+    # Get years player played using player data (if available)
+    # We'll assume max from 2015 to 2024 as fallback
+    player_info = players[players['gsis_id'] == player_id]
+
+    # You could refine this using roster data instead if needed
+    seasons = list(range(2015, 2025))  # Adjustable range
+
+    # Load only for those seasons
+    return nfl.import_pbp_data(seasons)
 
 if years:
     pbp = load_pbp(years)
@@ -257,7 +264,7 @@ combined_options = [""] + player_names + list(draft_pick_values.keys())
 
 def calculate_player_rating_with_details(player_id, pbp, players, years, use_career=False):
     if use_career:
-        career_pbp = load_full_career_pbp()
+        career_pbp = load_player_career_pbp(player_id, players)
         df_stat = career_pbp[
             (career_pbp['receiver_player_id'] == player_id) |
             (career_pbp['rusher_player_id'] == player_id) |
