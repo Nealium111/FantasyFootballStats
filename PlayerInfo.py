@@ -235,9 +235,6 @@ else:
 import datetime
 
 st.header("Dynasty Trade Calculator")
-st.caption("When enabled, player value is calculated using all seasons since 2015 instead of only the selected ones.")
-use_career_averages = st.checkbox("Use Career Averages Instead of Selected Seasons", value=False)
-
 
 # Draft pick values (example scale, adjust as needed)
 draft_pick_values = {
@@ -250,17 +247,7 @@ draft_pick_values = {
 # Combined player + picks list for dropdown
 combined_options = [""] + player_names + list(draft_pick_values.keys())
 
-def calculate_player_rating_with_details(player_id, pbp, players, years, use_career=False):
-if use_career:
-    # Load all seasons (from 2015 to 2024, for example)
-    all_years = list(range(2015, 2025))
-    career_pbp = load_pbp(all_years)
-    df_stat = career_pbp[
-        (career_pbp['receiver_player_id'] == player_id) |
-        (career_pbp['rusher_player_id'] == player_id) |
-        (career_pbp['passer_player_id'] == player_id)
-    ].copy()
-else:
+def calculate_player_rating_with_details(player_id, pbp, players, years):
     df_stat = pbp[
         (pbp['receiver_player_id'] == player_id) |
         (pbp['rusher_player_id'] == player_id) |
@@ -370,7 +357,7 @@ def compute_trade_value_detailed(slots):
         elif item != "":
             pid = get_player_id(item)
             if pid:
-                rating, total_fp, age_factor, age = calculate_player_rating_with_details(pid, pbp, players, years, use_career=use_career_averages)
+                rating, total_fp, age_factor, age = calculate_player_rating_with_details(pid, pbp, players, years)
                 total_value += rating
                 player_details.append({
                     "Player": item,
