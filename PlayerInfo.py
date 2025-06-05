@@ -10,26 +10,8 @@ st.set_page_config(layout="wide")
 years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[2024])
 
 @st.cache_data
-def load_player_weekly_stats(player_id):
-    all_years = list(range(2015, 2025))
-    weekly = nfl.import_weekly_data(all_years)
-    return weekly[weekly['player_id'] == player_id]
-
-@st.cache_data
 def load_pbp(years):
     return nfl.import_pbp_data(years)
-
-@st.cache_data
-def load_player_career_pbp(player_id, players):
-    # Get years player played using player data (if available)
-    # We'll assume max from 2015 to 2024 as fallback
-    player_info = players[players['gsis_id'] == player_id]
-
-    # You could refine this using roster data instead if needed
-    seasons = list(range(2015, 2025))  # Adjustable range
-
-    # Load only for those seasons
-    return nfl.import_pbp_data(seasons)
 
 if years:
     pbp = load_pbp(years)
@@ -269,26 +251,41 @@ draft_pick_values = {
 combined_options = [""] + player_names + list(draft_pick_values.keys())
 
 def calculate_player_rating_with_details(player_id, pbp, players, years, use_career=False):
-    if use_career:
-        df_stat = load_player_weekly_stats(player_id)
-    else:
-        df_stat = pbp[
-            (pbp['receiver_player_id'] == player_id) |
-            (pbp['rusher_player_id'] == player_id) |
-            (pbp['passer_player_id'] == player_id)
-        ].copy()
+if use_career:
+    # Load all seasons (from 2015 to 2024, for example)
+    all_years = list(range(2015, 2025))
+    career_pbp = load_pbp(all_years)
+    df_stat = career_pbp[
+        (career_pbp['receiver_player_id'] == player_id) |
+        (career_pbp['rusher_player_id'] == player_id) |
+        (career_pbp['passer_player_id'] == player_id)
+    ].copy()
+else:
+    df_stat = pbp[
+        (pbp['receiver_player_id'] == player_id) |
+        (pbp['rusher_player_id'] == player_id) |
+        (pbp['passer_player_id'] == player_id)
+    ].copy()
+
     if df_stat.empty:
         total_value = 0
     else:
         # Calculate positive stats excluding touchdowns
-        receiving_yds = df_stat['receiving_yards'].sum()
-        rushing_yds = df_stat['rushing_yards'].sum()
-        passing_yds = df_stat['passing_yards'].sum()
-        receptions = df_stat['receptions'].sum()
-        targets = df_stat['targets'].sum()
-        yac = df_stat.get('yards_after_catch', pd.Series(0)).sum()
-        fumbles_lost = df_stat.get('fumbles_lost', pd.Series(0)).sum()
-        interceptions_thrown = df_stat.get('interceptions', pd.Series(0)).sum()
+        receiving_yds = df_stat.loc[df_stat['receiver_player_id'] == player_id, 'receiving_yards'].sum()
+        rushing_yds = df_stat.loc[df_stat['rusher_player_id'] == player_id, 'rushing_yards'].sum()
+        passing_yds = df_stat.loc[df_stat['passer_player_id'] == player_id, 'passing_yards'].sum()
+
+        receptions = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['complete_pass'] == 1), :].shape[0]
+        targets = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['pass_attempt'] == 1), :].shape[0]
+
+        # Yards after catch (YAC)
+        yac = df_stat.loc[df_stat['receiver_player_id'] == player_id, 'yards_after_catch'].sum()
+
+        # Fumbles lost (negative stat - exclude or subtract)
+        fumbles_lost = df_stat.loc[df_stat['rusher_player_id'] == player_id, 'fumbles_lost'].sum() if 'fumbles_lost' in df_stat.columns else 0
+
+        # Interceptions thrown (negative, exclude)
+        interceptions_thrown = df_stat.loc[df_stat['passer_player_id'] == player_id, 'interceptions_thrown'].sum() if 'interceptions_thrown' in df_stat.columns else 0
 
         # Combine positive stats with weighting (customize weights as needed)
         total_value = (
