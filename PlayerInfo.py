@@ -251,22 +251,21 @@ draft_pick_values = {
 combined_options = [""] + player_names + list(draft_pick_values.keys())
 
 def calculate_player_rating_with_details(player_id, pbp, players, years, use_career=False):
-if use_career:
-    # Load all seasons (from 2015 to 2024, for example)
-    all_years = list(range(2015, 2025))
-    career_pbp = load_pbp(all_years)
-    df_stat = career_pbp[
-        (career_pbp['receiver_player_id'] == player_id) |
-        (career_pbp['rusher_player_id'] == player_id) |
-        (career_pbp['passer_player_id'] == player_id)
-    ].copy()
-else:
-    df_stat = pbp[
-        (pbp['receiver_player_id'] == player_id) |
-        (pbp['rusher_player_id'] == player_id) |
-        (pbp['passer_player_id'] == player_id)
-    ].copy()
-
+    if use_career:
+        # Load all seasons (from 2015 to 2024, for example)
+        all_years = list(range(2015, 2025))
+        career_pbp = load_pbp(all_years)
+        df_stat = career_pbp[
+            (career_pbp['receiver_player_id'] == player_id) |
+            (career_pbp['rusher_player_id'] == player_id) |
+            (career_pbp['passer_player_id'] == player_id)
+        ].copy()
+    else:
+        df_stat = pbp[
+            (pbp['receiver_player_id'] == player_id) |
+            (pbp['rusher_player_id'] == player_id) |
+            (pbp['passer_player_id'] == player_id)
+        ].copy()
     if df_stat.empty:
         total_value = 0
     else:
