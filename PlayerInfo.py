@@ -277,12 +277,6 @@ def calculate_player_rating_with_details(player_id, pbp, players, years, use_car
             (pbp['rusher_player_id'] == player_id) |
             (pbp['passer_player_id'] == player_id)
         ].copy()
-    else:
-        df_stat = pbp[
-            (pbp['receiver_player_id'] == player_id) |
-            (pbp['rusher_player_id'] == player_id) |
-            (pbp['passer_player_id'] == player_id)
-        ].copy()
     if df_stat.empty:
         total_value = 0
     else:
