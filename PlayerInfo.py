@@ -252,9 +252,7 @@ combined_options = [""] + player_names + list(draft_pick_values.keys())
 
 def calculate_player_rating_with_details(player_id, pbp, players, years, use_career=False):
     if use_career:
-        # Load all seasons (from 2015 to 2024, for example)
-        all_years = list(range(2015, 2025))
-        career_pbp = load_pbp(all_years)
+        career_pbp = load_full_career_pbp()
         df_stat = career_pbp[
             (career_pbp['receiver_player_id'] == player_id) |
             (career_pbp['rusher_player_id'] == player_id) |
