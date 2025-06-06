@@ -379,32 +379,42 @@ if st.button("Calculate Trade Values"):
 
 
     if not any(trade_b):  # Only recommend if Side B is empty
-        st.subheader("💡 Suggested Trade Matches for Side B")
+        from itertools import combinations
 
-        all_candidates = [p for p in combined_options if p not in trade_a and p != ""]
+        st.subheader("💡 Suggested Trade Combinations for Side B")
 
-        candidate_values = []
-        for candidate in all_candidates:
+        # Filter out rookies and Side A players
+        valid_candidates = []
+        for candidate in combined_options:
+            if candidate in trade_a or candidate == "":
+                continue
             if candidate.startswith("Draft Pick"):
                 val = draft_pick_values.get(candidate, 0)
+                valid_candidates.append((candidate, val))
             else:
                 pid = get_player_id(candidate)
-                if not pid or str(pid).startswith("rookie_"):  # Skip rookies
+                if not pid or str(pid).startswith("rookie_"):
                     continue
-                # Confirm player is on 2024 roster
                 if candidate not in offensive_rosters['player_name'].values:
                     continue
                 val, _, _, _ = calculate_player_rating_with_details(pid, pbp, players, years)
+                valid_candidates.append((candidate, val))
 
-            candidate_values.append((candidate, val))
+        # Generate combinations of 1 and 2 items
+        all_combos = []
+        for r in [1, 2]:
+            for combo in combinations(valid_candidates, r):
+                names = [x[0] for x in combo]
+                total = sum(x[1] for x in combo)
+                diff = abs(total - value_a)
+                all_combos.append((names, total, diff))
 
-        candidate_values = sorted(candidate_values, key=lambda x: abs(x[1] - value_a))
+        # Sort by difference to Side A
+        all_combos = sorted(all_combos, key=lambda x: x[2])
 
-        # Show top 5 closest matches
-        top_matches = candidate_values[:5]
-
-        for name, val in top_matches:
-            st.write(f"- **{name}**: Estimated Value = {val:.1f} (Diff = {abs(val - value_a):.1f})")
+        st.markdown("**Top 5 Closest Value Matches:**")
+        for names, total, diff in all_combos[:5]:
+            st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
 
     st.markdown("---")
     st.subheader("Details for Trade")
