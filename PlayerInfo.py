@@ -463,7 +463,7 @@ with tab2:
         st.write(f"**Trade Side A Value:** {value_a:.1f}")
         st.write(f"**Trade Side B Value:** {value_b:.1f}")
         with st.spinner("Loading recommendations..."):
-
+        min_value_threshold = 0.5  # or whatever minimum rating you want
             if not any(trade_b):  # Only recommend if Side B is empty
                 from itertools import combinations
 
@@ -483,6 +483,8 @@ with tab2:
                         if candidate not in offensive_rosters['player_name'].values:
                             continue
                         val, _, _, _ = calculate_player_rating_with_details(pid, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight)
+                        if val < min_value_threshold:
+                            continue  # skip low-value players
                         valid_candidates.append((candidate, val))
     
                 # Generate combinations of 1 and 2 items
