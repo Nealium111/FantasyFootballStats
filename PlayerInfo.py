@@ -457,7 +457,7 @@ with tab2:
 
     recommendation_type = st.selectbox(
     "Choose recommendation type for Side B:",
-    ["1 Player", "2 Players", "1 Player + 1 Draft Pick"]
+    ["1 Player", "2 Players", "1 Player + 1 Draft Pick", "2 Draft Picks"]
     )
     if st.button("Calculate Trade Values"):
 
@@ -530,6 +530,15 @@ with tab2:
                 for player, pick in product(valid_players, valid_picks):
                     names = [player[0], pick[0]]
                     total = player[1] + pick[1]
+                    diff = abs(total - value_a)
+                    all_combos.append((names, total, diff))
+
+            elif recommendation_type == "2 Draft Picks":
+                for combo in combinations(valid_picks, 2):
+                    names = [x[0] for x in combo]
+                    total = sum(x[1] for x in combo)
+                    if total < min_combined_value_threshold:
+                        continue
                     diff = abs(total - value_a)
                     all_combos.append((names, total, diff))
 
