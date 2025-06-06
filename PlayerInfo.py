@@ -499,18 +499,18 @@ if st.button("Calculate Trade Values"):
     st.markdown("---")
     st.subheader("Details for Trade")
     with st.expander("🔧 Current Stat Weights Used in Trade Valuation"):
-    st.json({
-        "Receiving Yards": receiving_yds_weight,
-        "Rushing Yards": rushing_yds_weight,
-        "Passing Yards": passing_yds_weight,
-        "Receptions": receptions_weight,
-        "Targets": targets_weight,
-        "YAC": yac_weight,
-        "Receiving TDs": rec_tds_weight,
-        "Rushing TDs": rush_tds_weight,
-        "Passing TDs": pass_tds_weight,
-        "Age Weight": age_weight
-    })
+        st.json({
+            "Receiving Yards": receiving_yds_weight,
+            "Rushing Yards": rushing_yds_weight,
+            "Passing Yards": passing_yds_weight,
+            "Receptions": receptions_weight,
+            "Targets": targets_weight,
+            "YAC": yac_weight,
+            "Receiving TDs": rec_tds_weight,
+            "Rushing TDs": rush_tds_weight,
+            "Passing TDs": pass_tds_weight,
+            "Age Weight": age_weight
+        })
 
     def safe_format(x, fmt):
         if x is None:
