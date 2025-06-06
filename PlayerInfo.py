@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import datetime
+from itertools import combinations, product
 
 st.set_page_config(layout="wide")
 
@@ -453,6 +454,10 @@ with tab2:
     trade_a = trade_side_ui("A", "side_a")
     trade_b = trade_side_ui("B", "side_b")
 
+    recommendation_type = st.selectbox(
+    "Choose recommendation type for Side B:",
+    ["1 Player", "2 Players", "1 Player + 1 Draft Pick"]
+    )
     if st.button("Calculate Trade Values"):
 
         value_a, details_a = compute_trade_value_detailed(trade_a)
@@ -485,21 +490,54 @@ with tab2:
                             continue  # skip low-value players
                         valid_candidates.append((candidate, val))
     
-                # Generate combinations of 1 and 2 items
-                all_combos = []
-                for r in [1, 2]:
-                    for combo in combinations(valid_candidates, r):
-                        names = [x[0] for x in combo]
-                        total = sum(x[1] for x in combo)
-                        diff = abs(total - value_a)
-                        all_combos.append((names, total, diff))
-    
-                # Sort by difference to Side A
-                all_combos = sorted(all_combos, key=lambda x: x[2])
-                st.subheader("💡 Suggested Trade Combinations for Side B")
-                st.markdown("**Top 5 Closest Value Matches:**")
-                for names, total, diff in all_combos[:5]:
-                    st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
+            # Separate players and draft picks
+            valid_players = []
+            valid_picks = []
+
+            for candidate, val in valid_candidates:
+                if candidate.startswith("Draft Pick"):
+                    valid_picks.append((candidate, val))
+                else:
+                    valid_players.append((candidate, val))
+
+            # Add user choice for recommendation type before this block:
+            # recommendation_type = st.selectbox(
+            #     "Choose recommendation type for Side B:",
+            #     ["1 Player", "2 Players", "1 Player + 1 Draft Pick"]
+            # )
+
+            all_combos = []
+
+            if recommendation_type == "1 Player":
+                # Just single players only
+                for player in valid_players:
+                    names = [player[0]]
+                    total = player[1]
+                    diff = abs(total - value_a)
+                    all_combos.append((names, total, diff))
+
+            elif recommendation_type == "2 Players":
+                # Combinations of 2 players only
+                for combo in combinations(valid_players, 2):
+                    names = [x[0] for x in combo]
+                    total = sum(x[1] for x in combo)
+                    diff = abs(total - value_a)
+                    all_combos.append((names, total, diff))
+
+            elif recommendation_type == "1 Player + 1 Draft Pick":
+                # All combinations of 1 player and 1 draft pick
+                for player, pick in product(valid_players, valid_picks):
+                    names = [player[0], pick[0]]
+                    total = player[1] + pick[1]
+                    diff = abs(total - value_a)
+                    all_combos.append((names, total, diff))
+
+            # Sort by difference to Side A
+            all_combos = sorted(all_combos, key=lambda x: x[2])
+            st.subheader("💡 Suggested Trade Combinations for Side B")
+            st.markdown("**Top 5 Closest Value Matches:**")
+            for names, total, diff in all_combos[:5]:
+                st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
 
         st.markdown("---")
         st.subheader("Details for Trade")
