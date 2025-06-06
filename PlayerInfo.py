@@ -420,8 +420,6 @@ with tab2:
     combined_options = [""] + player_names + list(draft_pick_values.keys())
 
 
-
-
     def trade_side_ui(side_label, key_prefix):
         st.subheader(f"Trade Side {side_label}")
 
@@ -463,7 +461,7 @@ with tab2:
         st.write(f"**Trade Side A Value:** {value_a:.1f}")
         st.write(f"**Trade Side B Value:** {value_b:.1f}")
         with st.spinner("Loading recommendations..."):
-            min_value_threshold = 0.5  # or whatever minimum rating you want
+            min_value_threshold = 50.0  # or whatever minimum rating you want
             if not any(trade_b):  # Only recommend if Side B is empty
                 from itertools import combinations
 
