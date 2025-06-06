@@ -469,8 +469,6 @@ with tab2:
         with st.spinner("Loading recommendations..."):
             min_value_threshold = 100.0  # or whatever minimum rating you want
             if not any(trade_b):  # Only recommend if Side B is empty
-                from itertools import combinations
-
 
                 # Filter out rookies and Side A players
                 for candidate in combined_options:
@@ -541,10 +539,11 @@ with tab2:
 
             # Sort by difference to Side A
             all_combos = sorted(all_combos, key=lambda x: x[2])
-            st.subheader("💡 Suggested Trade Combinations for Side B")
-            st.markdown("**Top 5 Closest Value Matches:**")
-            for names, total, diff in all_combos[:5]:
-                st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
+            if all_combos:
+                st.subheader("💡 Suggested Trade Combinations for Side B")
+                st.markdown("**Top 5 Closest Value Matches:**")
+                for names, total, diff in all_combos[:5]:
+                    st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
 
         st.markdown("---")
         st.subheader("Details for Trade")
