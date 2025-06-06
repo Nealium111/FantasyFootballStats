@@ -537,8 +537,6 @@ with tab2:
                 for combo in combinations(valid_picks, 2):
                     names = [x[0] for x in combo]
                     total = sum(x[1] for x in combo)
-                    if total < min_combined_value_threshold:
-                        continue
                     diff = abs(total - value_a)
                     all_combos.append((names, total, diff))
 
