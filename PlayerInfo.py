@@ -456,18 +456,17 @@ with tab2:
     trade_b = trade_side_ui("B", "side_b")
 
     if st.button("Calculate Trade Values"):
+
+        value_a, details_a = compute_trade_value_detailed(trade_a)
+        value_b, details_b = compute_trade_value_detailed(trade_b)
+
+        st.write(f"**Trade Side A Value:** {value_a:.1f}")
+        st.write(f"**Trade Side B Value:** {value_b:.1f}")
         with st.spinner("Loading recommendations..."):
-            value_a, details_a = compute_trade_value_detailed(trade_a)
-            value_b, details_b = compute_trade_value_detailed(trade_b)
-
-            st.write(f"**Trade Side A Value:** {value_a:.1f}")
-            st.write(f"**Trade Side B Value:** {value_b:.1f}")
-
 
             if not any(trade_b):  # Only recommend if Side B is empty
                 from itertools import combinations
 
-                st.subheader("💡 Suggested Trade Combinations for Side B")
 
                 # Filter out rookies and Side A players
                 valid_candidates = []
@@ -497,7 +496,7 @@ with tab2:
     
                 # Sort by difference to Side A
                 all_combos = sorted(all_combos, key=lambda x: x[2])
-
+                st.subheader("💡 Suggested Trade Combinations for Side B")
                 st.markdown("**Top 5 Closest Value Matches:**")
                 for names, total, diff in all_combos[:5]:
                     st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
