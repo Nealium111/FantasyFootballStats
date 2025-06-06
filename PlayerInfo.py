@@ -235,6 +235,16 @@ else:
 import datetime
 
 st.header("Dynasty Trade Calculator")
+st.sidebar.header("⚙️ Trade Settings")
+
+age_weight = st.sidebar.slider(
+    "Age Influence Weight",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.3,
+    step=0.05,
+    help="Controls how much age impacts a player's trade value. 0 = No age impact, 1 = Full influence"
+)
 
 # Draft pick values (example scale, adjust as needed)
 draft_pick_values = {
@@ -311,9 +321,9 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
     rookie_baseline_value = 100
 
     if total_value == 0:
-        rating = rookie_baseline_value * (1 + (age_factor - 5.0) * 0.1)
+        rating = rookie_baseline_value * (1 + (age_factor - 5.0) * age_weight * 0.1)
     else:
-        rating = total_value * (1 + (age_factor - 5.0) * 0.1)
+        rating = total_value * (1 + (age_factor - 5.0) * age_weight * 0.1)
 
     return rating, total_value, age_factor, age
 
