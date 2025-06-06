@@ -384,6 +384,7 @@ with tab1:
 
 with tab2:
     st.header("Dynasty Trade Calculator")
+    st.write(f"Leave side B Blank for Recommendations")
     st.sidebar.header("⚙️ Trade Settings")
 
     age_weight = st.sidebar.slider(
@@ -452,7 +453,7 @@ with tab2:
 # === Show UI and compute ===
 
     trade_a = trade_side_ui("A", "side_a")
-    trade_b = trade_side_ui("B (Leave Blank For Recommendations)", "side_b")
+    trade_b = trade_side_ui("B", "side_b")
 
     recommendation_type = st.selectbox(
     "Choose recommendation type for Side B:",
