@@ -452,7 +452,7 @@ with tab2:
 # === Show UI and compute ===
 
     trade_a = trade_side_ui("A", "side_a")
-    trade_b = trade_side_ui("B", "side_b")
+    trade_b = trade_side_ui("B (Leave Blank For Recommendations)", "side_b")
 
     recommendation_type = st.selectbox(
     "Choose recommendation type for Side B:",
