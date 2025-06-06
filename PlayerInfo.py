@@ -310,10 +310,10 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
         age_factor = max(0.5, age_factor)  # Clamp
     rookie_baseline_value = 100
 
-    if total_value == 0:
-        rating = rookie_baseline_value * age_factor
-    else:
-        rating = total_value * age_factor
+if total_value == 0:
+    rating = rookie_baseline_value * (1 + (age_factor - 5.0) * 0.1)
+else:
+    rating = total_value * (1 + (age_factor - 5.0) * 0.1)
 
     return rating, total_value, age_factor, age
 
