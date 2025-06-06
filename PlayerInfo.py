@@ -463,7 +463,7 @@ with tab2:
         st.write(f"**Trade Side A Value:** {value_a:.1f}")
         st.write(f"**Trade Side B Value:** {value_b:.1f}")
         with st.spinner("Loading recommendations..."):
-        min_value_threshold = 0.5  # or whatever minimum rating you want
+            min_value_threshold = 0.5  # or whatever minimum rating you want
             if not any(trade_b):  # Only recommend if Side B is empty
                 from itertools import combinations
 
