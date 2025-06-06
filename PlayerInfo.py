@@ -5,6 +5,43 @@ import matplotlib.pyplot as plt
 import math
 
 st.set_page_config(layout="wide")
+# === SIDEBAR TOOLS ===
+st.sidebar.header("⚙️ Trade Settings")
+
+# 1. Age Weight
+age_weight = st.sidebar.slider(
+    "Age Influence Weight",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.3,
+    step=0.05,
+    help="Controls how much age impacts a player's trade value. 0 = No age impact, 1 = Full influence"
+)
+
+# 2. Stat Weighting
+st.sidebar.subheader("📊 Stat Weighting")
+rec_weight = st.sidebar.slider("Reception Value", 0.0, 2.0, 1.0, 0.1)
+yac_weight = st.sidebar.slider("Yards After Catch (YAC)", 0.0, 0.2, 0.05, 0.01)
+pass_yds_weight = st.sidebar.slider("Passing Yards", 0.0, 0.1, 0.04, 0.01)
+rush_yds_weight = st.sidebar.slider("Rushing Yards", 0.0, 0.2, 0.1, 0.01)
+
+# 3. Position Filter
+st.sidebar.subheader("🧍 Position Filter")
+position_filter = st.sidebar.multiselect(
+    "Show Only Positions",
+    options=offensive_positions,
+    default=offensive_positions
+)
+filtered_players = offensive_rosters[offensive_rosters['position'].isin(position_filter)]
+filtered_names = sorted(filtered_players['player_name'].unique())
+combined_options = [""] + filtered_names + list(draft_pick_values.keys())
+
+# 4. Minimum Fantasy Points Filter
+min_fp = st.sidebar.slider("Minimum Fantasy Points", 0, 300, 50, 10)
+
+# 5. Trade Imbalance Sensitivity
+st.sidebar.subheader("⚖️ Trade Sensitivity")
+imbalance_tolerance = st.sidebar.slider("Imbalance Threshold", 0, 100, 10, 5)
 
 # Year selection
 years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[2024])
@@ -30,8 +67,6 @@ def load_rosters():
 
 rosters = load_rosters()
 players = load_players()
-
-
 
 offensive_positions = ['QB', 'RB', 'WR', 'TE']
 offensive_rosters = rosters[rosters['position'].isin(offensive_positions)]
@@ -286,15 +321,13 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
 
         # Combine positive stats with weighting (customize weights as needed)
         total_value = (
-            receiving_yds * 0.1 +
-            rushing_yds * 0.1 +
-            passing_yds * 0.04 +
-            receptions * 1 +
-            targets * 0.5 +
-            yac * 0.05
+            receptions * rec_weight +
+            yac * yac_weight +
+            passing_yds * pass_yds_weight +
+            rushing_yds * rush_yds_weight +
+            receiving_yds * 0.1 +  # You can consider adding a slider for receiving yards or combine with yac if you want
+            targets * 0.5  # You can also make this a slider if desired
         )
-        # You can optionally subtract negative stats if you want:
-        # total_value -= (fumbles_lost * 2 + interceptions_thrown * 3)
 
     # Age and age factor
     player_row = players[players['gsis_id'] == player_id]
@@ -321,9 +354,9 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
     rookie_baseline_value = 100
 
     if total_value == 0:
-        rating = rookie_baseline_value * (1 + (age_factor - 5.0) * age_weight * 0.1)
+        rating = rookie_baseline_value * ((1 - age_weight) + age_weight * age_factor)
     else:
-        rating = total_value * (1 + (age_factor - 5.0) * age_weight * 0.1)
+        rating = total_value * ((1 - age_weight) + age_weight * age_factor)
 
     return rating, total_value, age_factor, age
 
