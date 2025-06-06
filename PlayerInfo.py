@@ -11,7 +11,27 @@ years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[202
 
 @st.cache_data
 def load_pbp(years):
-    return nfl.import_pbp_data(years)
+    df = nfl.import_pbp_data(years)
+
+    # Keep only rows relevant to fantasy scoring
+    df = df[df['play_type'].isin(['pass', 'run', 'qb_spike', 'qb_kneel', 'sack'])]
+
+    # Reduce columns to only what's used
+    cols_to_keep = [
+        'season', 'week',
+        'receiver_player_id', 'rusher_player_id', 'passer_player_id',
+        'complete_pass', 'pass_attempt', 'passing_yards', 'passing_touchdowns',
+        'receiving_yards', 'rushing_yards', 'receiving_touchdowns', 'rushing_touchdowns',
+        'two_point_conv_result', 'yards_after_catch',
+        'interceptions_thrown', 'fumble', 'fumble_lost',
+        'fumble_recovery_1_player_id', 'fumble_recovery_2_player_id',
+        'touchdown'
+    ]
+
+    existing_cols = [col for col in cols_to_keep if col in df.columns]
+    df = df[existing_cols].copy()
+
+    return df
 
 if years:
     pbp = load_pbp(years)
@@ -31,6 +51,28 @@ def load_rosters():
 rosters = load_rosters()
 players = load_players()
 
+@st.cache_data
+def get_name_id_map(rosters, players):
+    name_id = {}
+
+    for _, row in rosters.iterrows():
+        name = row['player_name']
+        pid = row.get('player_id')
+        if pd.notna(name) and pd.notna(pid):
+            name_id[name] = pid
+
+    for _, row in players.iterrows():
+        name = row['display_name']
+        pid = row.get('gsis_id')
+        if name not in name_id and pd.notna(pid):
+            name_id[name] = pid
+
+    return name_id
+
+name_id_map = get_name_id_map(rosters, players)
+
+def get_player_id(name):
+    return name_id_map.get(name, f"rookie_{name.replace(' ', '_').lower()}")
 
 
 offensive_positions = ['QB', 'RB', 'WR', 'TE']
@@ -41,12 +83,10 @@ all_offensive_players = offensive_players['display_name'].unique()
 roster_player_names = offensive_rosters['player_name'].unique()
 
 # Rookies are in players but not in roster_player_names
-rookies = [name for name in all_offensive_players if name not in roster_player_names]
+rookies = list(set(all_offensive_players) - set(roster_player_names))
 
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
-
-#selected_players = st.multiselect("Choose Players", player_names, key="player_select")
 
 st.title("Fantasy Football Player Comparison Tool")
 
@@ -72,24 +112,6 @@ fantasy_stats = [
 
 with col2:
     selected_stats = st.multiselect("Choose Stats", fantasy_stats)
-
-def get_player_id(name):
-    # Try roster (has player_id)
-    matches = offensive_rosters[offensive_rosters['player_name'] == name]
-    if not matches.empty:
-        if 'player_id' in matches.columns:
-            return matches.iloc[0]['player_id']
-
-    # Try players table
-    matches = offensive_players[offensive_players['display_name'] == name]
-    if not matches.empty:
-        # Check for common ID fields
-        for id_col in ['player_id', 'gsis_id', 'nfl_id', 'pfr_id']:
-            if id_col in matches.columns and pd.notna(matches.iloc[0][id_col]):
-                return matches.iloc[0][id_col]
-
-    # Assign synthetic ID for rookie with no ID
-    return f"rookie_{name.replace(' ', '_').lower()}"
 
 if selected_players and selected_stats:
     n_stats = len(selected_stats)
@@ -246,6 +268,20 @@ age_weight = st.sidebar.slider(
     help="Controls how much age impacts a player's trade value. 0 = No age impact, 1 = Full influence"
 )
 
+st.sidebar.subheader("📊 Stat Weight Settings")
+
+receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+rushing_yds_weight = st.sidebar.slider("Rushing Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+passing_yds_weight = st.sidebar.slider("Passing Yards Weight", 0.0, 0.1, 0.04, step=0.01)
+receptions_weight = st.sidebar.slider("Receptions Weight", 0.0, 2.0, 1.0, step=0.1)
+targets_weight = st.sidebar.slider("Targets Weight", 0.0, 1.0, 0.5, step=0.1)
+yac_weight = st.sidebar.slider("Yards After Catch (YAC) Weight", 0.0, 0.2, 0.05, step=0.01)
+
+# Touchdown sliders
+rec_tds_weight = st.sidebar.slider("Receiving TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+rush_tds_weight = st.sidebar.slider("Rushing TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+pass_tds_weight = st.sidebar.slider("Passing TDs Weight", 0.0, 10.0, 4.0, step=0.5)
+
 # Draft pick values (example scale, adjust as needed)
 draft_pick_values = {
     'Draft Pick: 1st Round': 200,
@@ -257,7 +293,7 @@ draft_pick_values = {
 # Combined player + picks list for dropdown
 combined_options = [""] + player_names + list(draft_pick_values.keys())
 
-def calculate_player_rating_with_details(player_id, pbp, players, years):
+def calculate_player_rating_with_details(player_id, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight):
     df_stat = pbp[
         (pbp['receiver_player_id'] == player_id) |
         (pbp['rusher_player_id'] == player_id) |
@@ -267,34 +303,45 @@ def calculate_player_rating_with_details(player_id, pbp, players, years):
     if df_stat.empty:
         total_value = 0
     else:
-        # Calculate positive stats excluding touchdowns
+        # Positive stats
         receiving_yds = df_stat.loc[df_stat['receiver_player_id'] == player_id, 'receiving_yards'].sum()
         rushing_yds = df_stat.loc[df_stat['rusher_player_id'] == player_id, 'rushing_yards'].sum()
         passing_yds = df_stat.loc[df_stat['passer_player_id'] == player_id, 'passing_yards'].sum()
 
-        receptions = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['complete_pass'] == 1), :].shape[0]
-        targets = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['pass_attempt'] == 1), :].shape[0]
-
-        # Yards after catch (YAC)
+        receptions = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['complete_pass'] == 1)].shape[0]
+        targets = df_stat.loc[(df_stat['receiver_player_id'] == player_id) & (df_stat['pass_attempt'] == 1)].shape[0]
         yac = df_stat.loc[df_stat['receiver_player_id'] == player_id, 'yards_after_catch'].sum()
 
-        # Fumbles lost (negative stat - exclude or subtract)
-        fumbles_lost = df_stat.loc[df_stat['rusher_player_id'] == player_id, 'fumbles_lost'].sum() if 'fumbles_lost' in df_stat.columns else 0
+        # Touchdowns
+        rec_tds = df_stat.loc[
+            (df_stat['receiver_player_id'] == player_id) &
+            (df_stat['complete_pass'] == 1) &
+            (df_stat['touchdown'] == 1)
+        ].shape[0]
 
-        # Interceptions thrown (negative, exclude)
-        interceptions_thrown = df_stat.loc[df_stat['passer_player_id'] == player_id, 'interceptions_thrown'].sum() if 'interceptions_thrown' in df_stat.columns else 0
+        rush_tds = df_stat.loc[
+            (df_stat['rusher_player_id'] == player_id) &
+            (df_stat['touchdown'] == 1)
+        ].shape[0]
 
-        # Combine positive stats with weighting (customize weights as needed)
+        pass_tds = df_stat.loc[
+            (df_stat['passer_player_id'] == player_id) &
+            (df_stat['complete_pass'] == 1) &
+            (df_stat['touchdown'] == 1)
+        ].shape[0]
+
+        # Total value based on sliders
         total_value = (
-            receiving_yds * 0.1 +
-            rushing_yds * 0.1 +
-            passing_yds * 0.04 +
-            receptions * 1 +
-            targets * 0.5 +
-            yac * 0.05
+            receiving_yds * receiving_yds_weight +
+            rushing_yds * rushing_yds_weight +
+            passing_yds * passing_yds_weight +
+            receptions * receptions_weight +
+            targets * targets_weight +
+            yac * yac_weight +
+            rec_tds * rec_tds_weight +
+            rush_tds * rush_tds_weight +
+            pass_tds * pass_tds_weight
         )
-        # You can optionally subtract negative stats if you want:
-        # total_value -= (fumbles_lost * 2 + interceptions_thrown * 3)
 
     # Age and age factor
     player_row = players[players['gsis_id'] == player_id]
@@ -378,7 +425,19 @@ def compute_trade_value_detailed(slots):
         elif item != "":
             pid = get_player_id(item)
             if pid:
-                rating, total_fp, age_factor, age = calculate_player_rating_with_details(pid, pbp, players, years)
+                rating, total_fp, age_factor, age = calculate_player_rating_with_details(
+                    pid, pbp, players, years,
+                    receiving_yds_weight,
+                    rushing_yds_weight,
+                    passing_yds_weight,
+                    receptions_weight,
+                    targets_weight,
+                    yac_weight,
+                    rec_tds_weight,
+                    rush_tds_weight,
+                    pass_tds_weight,
+                    age_weight
+                )
                 total_value += rating
                 player_details.append({
                     "Player": item,
@@ -420,7 +479,7 @@ if st.button("Calculate Trade Values"):
                     continue
                 val, _, _, _ = calculate_player_rating_with_details(pid, pbp, players, years)
                 valid_candidates.append((candidate, val))
-
+    
         # Generate combinations of 1 and 2 items
         all_combos = []
         for r in [1, 2]:
@@ -439,6 +498,19 @@ if st.button("Calculate Trade Values"):
 
     st.markdown("---")
     st.subheader("Details for Trade")
+    with st.expander("🔧 Current Stat Weights Used in Trade Valuation"):
+    st.json({
+        "Receiving Yards": receiving_yds_weight,
+        "Rushing Yards": rushing_yds_weight,
+        "Passing Yards": passing_yds_weight,
+        "Receptions": receptions_weight,
+        "Targets": targets_weight,
+        "YAC": yac_weight,
+        "Receiving TDs": rec_tds_weight,
+        "Rushing TDs": rush_tds_weight,
+        "Passing TDs": pass_tds_weight,
+        "Age Weight": age_weight
+    })
 
     def safe_format(x, fmt):
         if x is None:
