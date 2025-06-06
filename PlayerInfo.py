@@ -41,22 +41,6 @@ def load_players():
 def load_rosters():
     return nfl.import_seasonal_rosters([2024])  # or include more years if needed
 
-
-
-rosters = load_rosters()
-players = load_players()
-
-name_id_map = get_name_id_map(rosters, players)
-
-# Year selection
-years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[2024])
-
-if years:
-    pbp = load_pbp(years)
-else:
-    st.warning("Please select at least one year.")
-    st.stop()
-
 @st.cache_data
 def get_name_id_map(rosters, players):
     name_id = {}
@@ -74,6 +58,20 @@ def get_name_id_map(rosters, players):
             name_id[name] = pid
 
     return name_id
+
+rosters = load_rosters()
+players = load_players()
+
+name_id_map = get_name_id_map(rosters, players)
+
+# Year selection
+years = st.multiselect("Select Season(s)", list(range(2015, 2025)), default=[2024])
+
+if years:
+    pbp = load_pbp(years)
+else:
+    st.warning("Please select at least one year.")
+    st.stop()
 
 def get_player_id(name):
     return name_id_map.get(name, f"rookie_{name.replace(' ', '_').lower()}")
