@@ -483,7 +483,7 @@ with tab2:
                         continue
                     if candidate not in offensive_rosters['player_name'].values:
                         continue
-                    val, _, _, _ = calculate_player_rating_with_details(candidate, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight)
+                    val, _, _, _ = calculate_player_rating_with_details(candidate, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight)
                     valid_candidates.append((candidate, val))
     
             # Generate combinations of 1 and 2 items
