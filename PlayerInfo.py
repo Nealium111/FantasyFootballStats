@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import datetime
-from itertools import combinations, product
+from itertools import combinations, product, combinations_with_replacement
 
 st.set_page_config(layout="wide")
 
@@ -534,7 +534,7 @@ with tab2:
                     all_combos.append((names, total, diff))
 
             elif recommendation_type == "2 Draft Picks":
-                for combo in combinations(valid_picks, 2):
+                for combo in combinations_with_replacement(valid_picks, 2):
                     names = [x[0] for x in combo]
                     total = sum(x[1] for x in combo)
                     diff = abs(total - value_a)
