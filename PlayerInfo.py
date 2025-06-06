@@ -378,13 +378,29 @@ if st.button("Calculate Trade Values"):
     st.write(f"**Trade Side B Value:** {value_b:.1f}")
 
 
-    diff = value_a - value_b
-    if abs(diff) < 10:
-        st.success("The trade is roughly balanced!")
-    elif diff > 0:
-        st.warning("Side A is giving more value.")
-    else:
-        st.warning("Side B is giving more value.")
+    if not any(trade_b):  # Only recommend if Side B is empty
+        st.subheader("💡 Suggested Trade Matches for Side B")
+
+        all_candidates = [p for p in combined_options if p not in trade_a and p != ""]
+
+        candidate_values = []
+        for candidate in all_candidates:
+            if candidate.startswith("Draft Pick"):
+                val = draft_pick_values.get(candidate, 0)
+            else:
+                pid = get_player_id(candidate)
+                if not pid:
+                    continue
+                val, _, _, _ = calculate_player_rating_with_details(pid, pbp, players, years)
+            candidate_values.append((candidate, val))
+
+        candidate_values = sorted(candidate_values, key=lambda x: abs(x[1] - value_a))
+
+        # Show top 5 closest matches
+        top_matches = candidate_values[:5]
+
+        for name, val in top_matches:
+            st.write(f"- **{name}**: Estimated Value = {val:.1f} (Diff = {abs(val - value_a):.1f})")
 
     st.markdown("---")
     st.subheader("Details for Trade")
