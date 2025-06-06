@@ -456,52 +456,51 @@ with tab2:
     trade_b = trade_side_ui("B", "side_b")
 
     if st.button("Calculate Trade Values"):
+        with st.spinner("Loading recommendations..."):
+            value_a, details_a = compute_trade_value_detailed(trade_a)
+            value_b, details_b = compute_trade_value_detailed(trade_b)
 
-        value_a, details_a = compute_trade_value_detailed(trade_a)
-        value_b, details_b = compute_trade_value_detailed(trade_b)
-
-        st.write(f"**Trade Side A Value:** {value_a:.1f}")
-        st.write(f"**Trade Side B Value:** {value_b:.1f}")
+            st.write(f"**Trade Side A Value:** {value_a:.1f}")
+            st.write(f"**Trade Side B Value:** {value_b:.1f}")
 
 
-        if not any(trade_b):  # Only recommend if Side B is empty
-            from itertools import combinations
+            if not any(trade_b):  # Only recommend if Side B is empty
+                from itertools import combinations
 
-            st.subheader("💡 Suggested Trade Combinations for Side B")
+                st.subheader("💡 Suggested Trade Combinations for Side B")
 
-            # Filter out rookies and Side A players
-            valid_candidates = []
-            for candidate in combined_options:
-                if candidate in trade_a or candidate == "":
-                    continue
-                if candidate.startswith("Draft Pick"):
-                    val = draft_pick_values.get(candidate, 0)
-                    valid_candidates.append((candidate, val))
-                else:
-                    pid = get_player_id(candidate)
-                    if not pid or str(pid).startswith("rookie_"):
+                # Filter out rookies and Side A players
+                valid_candidates = []
+                for candidate in combined_options:
+                    if candidate in trade_a or candidate == "":
                         continue
-                    if candidate not in offensive_rosters['player_name'].values:
-                        continue
-                    with st.spinner("Loading recommendations..."):
+                    if candidate.startswith("Draft Pick"):
+                        val = draft_pick_values.get(candidate, 0)
+                        valid_candidates.append((candidate, val))
+                    else:
+                        pid = get_player_id(candidate)
+                        if not pid or str(pid).startswith("rookie_"):
+                            continue
+                        if candidate not in offensive_rosters['player_name'].values:
+                            continue
                         val, _, _, _ = calculate_player_rating_with_details(candidate, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight)
                         valid_candidates.append((candidate, val))
     
-            # Generate combinations of 1 and 2 items
-            all_combos = []
-            for r in [1, 2]:
-                for combo in combinations(valid_candidates, r):
-                    names = [x[0] for x in combo]
-                    total = sum(x[1] for x in combo)
-                    diff = abs(total - value_a)
-                    all_combos.append((names, total, diff))
+                # Generate combinations of 1 and 2 items
+                all_combos = []
+                for r in [1, 2]:
+                    for combo in combinations(valid_candidates, r):
+                        names = [x[0] for x in combo]
+                        total = sum(x[1] for x in combo)
+                        diff = abs(total - value_a)
+                        all_combos.append((names, total, diff))
     
-            # Sort by difference to Side A
-            all_combos = sorted(all_combos, key=lambda x: x[2])
+                # Sort by difference to Side A
+                all_combos = sorted(all_combos, key=lambda x: x[2])
 
-            st.markdown("**Top 5 Closest Value Matches:**")
-            for names, total, diff in all_combos[:5]:
-                st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
+                st.markdown("**Top 5 Closest Value Matches:**")
+                for names, total, diff in all_combos[:5]:
+                    st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
 
         st.markdown("---")
         st.subheader("Details for Trade")
