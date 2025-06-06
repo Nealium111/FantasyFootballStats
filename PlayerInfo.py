@@ -389,9 +389,13 @@ if st.button("Calculate Trade Values"):
                 val = draft_pick_values.get(candidate, 0)
             else:
                 pid = get_player_id(candidate)
-                if not pid:
+                if not pid or str(pid).startswith("rookie_"):  # Skip rookies
+                    continue
+                # Confirm player is on 2024 roster
+                if candidate not in offensive_rosters['player_name'].values:
                     continue
                 val, _, _, _ = calculate_player_rating_with_details(pid, pbp, players, years)
+
             candidate_values.append((candidate, val))
 
         candidate_values = sorted(candidate_values, key=lambda x: abs(x[1] - value_a))
