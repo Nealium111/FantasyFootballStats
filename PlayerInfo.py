@@ -8,8 +8,6 @@ from itertools import combinations, product, combinations_with_replacement
 
 st.set_page_config(layout="wide")
 
-
-
 @st.cache_data
 def load_pbp(years):
     df = nfl.import_pbp_data(years)
@@ -198,7 +196,6 @@ def compute_trade_value_detailed(slots):
                     "Age": age
                 })
     return total_value, player_details
-
 
 offensive_positions = ['QB', 'RB', 'WR', 'TE']
 offensive_rosters = rosters[rosters['position'].isin(offensive_positions)]
@@ -451,7 +448,6 @@ with tab2:
         return new_slots
 
 # === Show UI and compute ===
-
     trade_a = trade_side_ui("A", "side_a")
     trade_b = trade_side_ui("B", "side_b")
 
@@ -497,13 +493,7 @@ with tab2:
                     valid_picks.append((candidate, val))
                 else:
                     valid_players.append((candidate, val))
-
-            # Add user choice for recommendation type before this block:
-            # recommendation_type = st.selectbox(
-            #     "Choose recommendation type for Side B:",
-            #     ["1 Player", "2 Players", "1 Player + 1 Draft Pick"]
-            # )
-
+                    
             all_combos = []
 
             if recommendation_type == "1 Player":
