@@ -622,32 +622,30 @@ with tab3:
             team_value = 0
             player_summary = []
 
-            for sid in player_ids:
-                gsis_id = sleeper_to_gsis.get(sid)
-                if not gsis_id:
-                    continue  # Skip rookies or unmapped players
-
-                try:
-                    rating, total_fp, age_factor, age = calculate_player_rating_with_details(
-                        gsis_id, pbp, players, years,
-                        receiving_yds_weight,
-                        rushing_yds_weight,
-                        passing_yds_weight,
-                        receptions_weight,
-                        targets_weight,
-                        yac_weight,
-                        rec_tds_weight,
-                        rush_tds_weight,
-                        pass_tds_weight,
-                        age_weight
-                    )
-                    team_value += rating
-
-                    player_name = sleeper_players[sid].get('full_name', 'Unknown')
-                    player_summary.append((player_name, rating))
-
-                except Exception as e:
-                    st.warning(f"Error rating player {sid}: {e}")
+        for sid in player_ids:  # sid is Sleeper player_id
+        # Skip rookies or invalid IDs if needed:
+            if sid.startswith("rookie_"):
+                continue
+    
+            try:
+                rating, total_fp, age_factor, age = calculate_player_rating_with_details(
+                    sid, pbp, players, years,
+                    receiving_yds_weight,
+                    rushing_yds_weight,
+                    passing_yds_weight,
+                    receptions_weight,
+                    targets_weight,
+                    yac_weight,
+                    rec_tds_weight,
+                    rush_tds_weight,
+                    pass_tds_weight,
+                    age_weight
+                )
+                team_value += rating
+                player_name = sleeper_players[sid].get('full_name', 'Unknown')
+                player_summary.append((player_name, rating))
+            except Exception as e:
+                st.warning(f"Error rating player {sid}: {e}")
 
             # Sort players by rating descending, then format top 5
             player_summary.sort(key=lambda x: x[1], reverse=True)
