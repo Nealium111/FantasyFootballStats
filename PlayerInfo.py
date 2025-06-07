@@ -34,11 +34,12 @@ def load_pbp(years):
     return df
 
 @st.cache_data
-def load_sleeper_players():
+def get_sleeper_players():
     url = "https://api.sleeper.app/v1/players/nfl"
     response = requests.get(url)
-    response.raise_for_status()
-    return response.json()  # dict with keys = sleeper_player_id
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch sleeper players: {response.status_code}")
+    return response.json()  # This is critical!
 
 
 
@@ -290,7 +291,7 @@ roster_player_names = offensive_rosters['player_name'].unique()
 rookies = list(set(all_offensive_players) - set(roster_player_names))
 
 league_id = "1180202220087533568"  # or make this user input
-sleeper_players = load_sleeper_players()
+sleeper_players = get_sleeper_players()
 sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
 name_to_sleeper = {player['full_name']: player['player_id'] for player in sleeper_players if 'full_name' in player and 'player_id' in player}
 team_id_to_name = get_sleeper_users(league_id)
