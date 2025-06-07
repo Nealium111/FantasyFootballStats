@@ -655,49 +655,41 @@ with tab2:
             }),
             use_container_width=True
         )
-with tab3:
-    league_id = st.text_input("Enter your Sleeper League ID", "1180202220087533568")
-    if league_id:
-        try:
-            team_rosters = get_sleeper_rosters(league_id)
-            st.success(f"Loaded {len(team_rosters)} teams from Sleeper league {league_id}")
-            
-            # Show teams and player counts
-            for team, players_list in team_rosters.items():
-                st.write(f"Team {team}: {len(players_list)} players")
+with tab3:  # Sleeper League tab
+    st.header("Sleeper League Trade Evaluator")
 
-            # Select teams for trade evaluation
-            team_ids = list(team_rosters.keys())
-            team1_id = st.selectbox("Select Team 1", team_ids)
-            team2_id = st.selectbox("Select Team 2", team_ids)
+    # Example: Select team
+    team1_id = st.selectbox("Select Team 1", options=list(team_rosters.keys()))
+    team2_id = st.selectbox("Select Team 2", options=list(team_rosters.keys()))
 
-            # Simple UI to input traded players by Sleeper IDs (comma-separated)
-            trade_team1_str = st.text_input("Team 1 Players to Trade (Sleeper IDs comma separated)")
-            trade_team2_str = st.text_input("Team 2 Players to Trade (Sleeper IDs comma separated)")
+    # Get player names on these teams using name_to_sleeper and the roster
+    team1_players = [p for p in name_to_sleeper.keys() if name_to_sleeper[p] in team_rosters[team1_id]]
+    team2_players = [p for p in name_to_sleeper.keys() if name_to_sleeper[p] in team_rosters[team2_id]]
 
-            trade_team1 = [x.strip() for x in trade_team1_str.split(",")] if trade_team1_str else []
-            trade_team2 = [x.strip() for x in trade_team2_str.split(",")] if trade_team2_str else []
+    trade_team1_names = st.multiselect("Select Players from Team 1 to Trade", options=team1_players)
+    trade_team2_names = st.multiselect("Select Players from Team 2 to Trade", options=team2_players)
 
-            if st.button("Evaluate Trade"):
-                results = evaluate_trade_sleeper_rosters(
-                    team_rosters, team1_id, team2_id, trade_team1, trade_team2, sleeper_to_gsis,
-                    pbp=pbp, players=players, years=years,
-                    receiving_yds_weight=receiving_yds_weight,
-                    rushing_yds_weight=rushing_yds_weight,
-                    passing_yds_weight=passing_yds_weight,
-                    receptions_weight=receptions_weight,
-                    targets_weight=targets_weight,
-                    yac_weight=yac_weight,
-                    rec_tds_weight=rec_tds_weight,
-                    rush_tds_weight=rush_tds_weight,
-                    pass_tds_weight=pass_tds_weight,
-                    age_weight=age_weight
-                )
-                st.write("### Trade Evaluation Results")
-                st.write(results)
+    # Convert names to Sleeper IDs for evaluation
+    trade_team1_ids = [name_to_sleeper[name] for name in trade_team1_names]
+    trade_team2_ids = [name_to_sleeper[name] for name in trade_team2_names]
 
-        except Exception as e:
-            st.error(f"Error loading league rosters: {e}")
+    if st.button("Evaluate Trade"):
+        results = evaluate_trade_sleeper_rosters(
+            team_rosters, team1_id, team2_id, trade_team1_ids, trade_team2_ids, sleeper_to_gsis,
+            pbp=pbp, players=players, years=years,
+            receiving_yds_weight=receiving_yds_weight,
+            rushing_yds_weight=rushing_yds_weight,
+            passing_yds_weight=passing_yds_weight,
+            receptions_weight=receptions_weight,
+            targets_weight=targets_weight,
+            yac_weight=yac_weight,
+            rec_tds_weight=rec_tds_weight,
+            rush_tds_weight=rush_tds_weight,
+            pass_tds_weight=pass_tds_weight,
+            age_weight=age_weight
+        )
+        st.write("### Trade Evaluation Results")
+        st.write(results)
 
     
     
