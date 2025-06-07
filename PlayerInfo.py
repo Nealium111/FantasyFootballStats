@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import math
 import datetime
 from itertools import combinations, product, combinations_with_replacement
+import requests
 
 st.set_page_config(layout="wide")
 
@@ -210,7 +211,7 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
 
-tab1,tab2=st.tabs(["Player Comparison", "Dynasty Trade Calculator"])
+tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Sleeper League Breakdown"])
 
 with tab1:
     st.title("Fantasy Football Player Comparison Tool")
@@ -578,3 +579,78 @@ with tab2:
             }),
             use_container_width=True
         )
+with tab3:
+    st.title("Roster Rankings (Sleeper)")
+
+    league_id = st.text_input("Enter Sleeper League ID:")
+
+    if league_id:
+        @st.cache_data
+        def get_sleeper_rosters(league_id):
+            url = f"https://api.sleeper.app/v1/league/{league_id}/rosters"
+            res = requests.get(url)
+            return res.json() if res.ok else []
+
+        @st.cache_data
+        def get_sleeper_users(league_id):
+            url = f"https://api.sleeper.app/v1/league/{league_id}/users"
+            res = requests.get(url)
+            return {u['user_id']: u['display_name'] for u in res.json()} if res.ok else {}
+
+        @st.cache_data
+        def get_sleeper_players():
+            url = "https://api.sleeper.app/v1/players/nfl"
+            res = requests.get(url)
+            return res.json() if res.ok else {}
+
+        sleeper_players = get_sleeper_players()
+        rosters = get_sleeper_rosters(league_id)
+        users = get_sleeper_users(league_id)
+
+        # Build Sleeper ID → GSIS ID map
+        sleeper_to_gsis = {
+            sid: pdata.get('gsis_id')
+            for sid, pdata in sleeper_players.items()
+            if pdata.get('gsis_id') is not None
+        }
+
+        team_rankings = []
+
+        for team in rosters:
+            owner = users.get(team['owner_id'], 'Unknown')
+            player_ids = team.get('players', [])
+            team_value = 0
+            player_summary = []
+
+            for sid in player_ids:
+                gsis_id = sleeper_to_gsis.get(sid)
+                if gsis_id:
+                    rating, total_fp, age_factor, age = calculate_player_rating_with_details(
+                        gsis_id, pbp, players, years,
+                        receiving_yds_weight,
+                        rushing_yds_weight,
+                        passing_yds_weight,
+                        receptions_weight,
+                        targets_weight,
+                        yac_weight,
+                        rec_tds_weight,
+                        rush_tds_weight,
+                        pass_tds_weight,
+                        age_weight
+                    )
+                    team_value += rating
+                    player_summary.append(f"{sleeper_players[sid]['full_name']} ({int(rating)})")
+
+            team_rankings.append({
+                "Owner": owner,
+                "Team Value": round(team_value, 2),
+                "Player Count": len(player_summary),
+                "Top Players": ", ".join(player_summary[:5]) + ("..." if len(player_summary) > 5 else "")
+            })
+
+        df_rankings = pd.DataFrame(team_rankings).sort_values(by="Team Value", ascending=False)
+
+        st.subheader("Ranked Sleeper Rosters")
+        st.dataframe(df_rankings, use_container_width=True)
+    
+    
