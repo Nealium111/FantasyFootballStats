@@ -611,7 +611,7 @@ with tab3:
         sleeper_to_gsis = {
             sid: pdata.get('gsis_id')
             for sid, pdata in sleeper_players.items()
-            if pdata.get('gsis_id') is not None
+            if pdata.get('gsis_id')
         }
 
         team_rankings = []
@@ -624,7 +624,10 @@ with tab3:
 
             for sid in player_ids:
                 gsis_id = sleeper_to_gsis.get(sid)
-                if gsis_id:
+                if not gsis_id:
+                    continue  # Skip rookies or unmapped players
+
+                try:
                     rating, total_fp, age_factor, age = calculate_player_rating_with_details(
                         gsis_id, pbp, players, years,
                         receiving_yds_weight,
@@ -639,7 +642,12 @@ with tab3:
                         age_weight
                     )
                     team_value += rating
-                    player_summary.append(f"{sleeper_players[sid]['full_name']} ({int(rating)})")
+
+                    player_name = sleeper_players[sid].get('full_name', 'Unknown')
+                    player_summary.append(f"{player_name} ({int(rating)})")
+
+                except Exception as e:
+                    st.warning(f"Error rating player {sid}: {e}")
 
             team_rankings.append({
                 "Owner": owner,
@@ -648,9 +656,14 @@ with tab3:
                 "Top Players": ", ".join(player_summary[:5]) + ("..." if len(player_summary) > 5 else "")
             })
 
-        df_rankings = pd.DataFrame(team_rankings).sort_values(by="Team Value", ascending=False)
+        if team_rankings:
+            df_rankings = pd.DataFrame(team_rankings).sort_values(by="Team Value", ascending=False)
 
-        st.subheader("Ranked Sleeper Rosters")
-        st.dataframe(df_rankings, use_container_width=True)
+            st.subheader("Ranked Sleeper Rosters")
+            st.dataframe(df_rankings, use_container_width=True)
+
+            st.bar_chart(df_rankings.set_index("Owner")["Team Value"])
+        else:
+            st.info("No valid players found in rosters. Ensure the league has valid NFL players with GSIS IDs.")
     
     
