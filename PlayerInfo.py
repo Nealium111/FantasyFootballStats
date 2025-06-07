@@ -282,6 +282,7 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 
 sleeper_players = load_sleeper_players()
 sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
+name_to_sleeper = {player['full_name']: player['player_id'] for player in sleeper_players if 'full_name' in player and 'player_id' in player}
 league_id = "1180202220087533568"  # or make this user input
 
 try:
