@@ -77,6 +77,7 @@ else:
 def get_player_id(name):
     return name_id_map.get(name, f"rookie_{name.replace(' ', '_').lower()}")
 
+@st.cache_data
 def calculate_player_rating_with_details(player_id, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight):
     df_stat = pbp[
         (pbp['receiver_player_id'] == player_id) |
@@ -211,7 +212,7 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
 
-tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Sleeper League Breakdown"])
+tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Dynasty Value Over Time"])
 
 st.sidebar.subheader("📊 Stat Weight Settings")
 receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
@@ -579,5 +580,61 @@ with tab2:
             }),
             use_container_width=True
         )
+with tab3:
+    st.title("📈 Fantasy Value Over Time")
+    st.markdown("Track player fantasy value over time based on your custom scoring settings.")
+
+    selected_players_tab4 = st.multiselect("Select Players to Track", player_names)
+
+    if not selected_players_tab4:
+        st.info("Please select at least one player to display value trends.")
+        if selected_players_tab4:
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        all_weeks = sorted(pbp[['season', 'week']].drop_duplicates().values.tolist())
+
+        for player_name in selected_players_tab4:
+            pid = get_player_id(player_name)
+
+            values_over_time = []
+            labels = []
+
+            for season, week in all_weeks:
+                pbp_week = pbp[(pbp['season'] == season) & (pbp['week'] == week)]
+
+                if pbp_week.empty:
+                    values_over_time.append(0)
+                    labels.append(f"{season} W{week}")
+                    continue
+
+                value, _, _, _ = calculate_player_rating_with_details(
+                    pid, pbp_week, players, [season],
+                    receiving_yds_weight,
+                    rushing_yds_weight,
+                    passing_yds_weight,
+                    receptions_weight,
+                    targets_weight,
+                    yac_weight,
+                    rec_tds_weight,
+                    rush_tds_weight,
+                    pass_tds_weight,
+                    age_weight
+                )
+
+                values_over_time.append(value)
+                labels.append(f"{season} W{week}")
+
+            ax.plot(values_over_time, label=player_name)
+
+        ax.set_title("Fantasy Value Over Time")
+        ax.set_ylabel("Player Value")
+        ax.set_xlabel("Season Week")
+        ax.set_xticks(range(0, len(labels), max(1, len(labels)//20)))
+        ax.set_xticklabels(labels[::max(1, len(labels)//20)], rotation=45, fontsize=8)
+        ax.legend()
+        ax.grid(True)
+
+        st.pyplot(fig)
+    
     
     
