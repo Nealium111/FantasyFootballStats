@@ -594,7 +594,7 @@ with tab3:
 
     all_weeks = sorted(pbp[['season', 'week']].drop_duplicates().values.tolist())
 
-    for player_name in selected_players_tab4:
+    for player_name in selected_players_tab3:
         pid = get_player_id(player_name)
 
         values_over_time = []
