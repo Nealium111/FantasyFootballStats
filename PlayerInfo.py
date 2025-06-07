@@ -672,7 +672,33 @@ with tab3:
             team1_id = st.selectbox("Select Team 1", team_ids)
             team2_id = st.selectbox("Select Team 2", team_ids)
 
-            # Simple UI to input traded players by
+            # Simple UI to input traded players by Sleeper IDs (comma-separated)
+            trade_team1_str = st.text_input("Team 1 Players to Trade (Sleeper IDs comma separated)")
+            trade_team2_str = st.text_input("Team 2 Players to Trade (Sleeper IDs comma separated)")
+
+            trade_team1 = [x.strip() for x in trade_team1_str.split(",")] if trade_team1_str else []
+            trade_team2 = [x.strip() for x in trade_team2_str.split(",")] if trade_team2_str else []
+
+            if st.button("Evaluate Trade"):
+                results = evaluate_trade_sleeper_rosters(
+                    team_rosters, team1_id, team2_id, trade_team1, trade_team2, sleeper_to_gsis,
+                    pbp=pbp, players=players, years=years,
+                    receiving_yds_weight=receiving_yds_weight,
+                    rushing_yds_weight=rushing_yds_weight,
+                    passing_yds_weight=passing_yds_weight,
+                    receptions_weight=receptions_weight,
+                    targets_weight=targets_weight,
+                    yac_weight=yac_weight,
+                    rec_tds_weight=rec_tds_weight,
+                    rush_tds_weight=rush_tds_weight,
+                    pass_tds_weight=pass_tds_weight,
+                    age_weight=age_weight
+                )
+                st.write("### Trade Evaluation Results")
+                st.write(results)
+
+        except Exception as e:
+            st.error(f"Error loading league rosters: {e}")
 
     
     
