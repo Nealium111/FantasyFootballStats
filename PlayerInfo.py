@@ -103,7 +103,7 @@ else:
     st.stop()
 
 def get_sleeper_rosters(league_id):
-    url = f"https://api.sleeper.app/v1/league/1180202220087533568/rosters"
+    url = f"https://api.sleeper.app/v1/league/{league_id}/rosters"
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch rosters: {response.status_code}")
@@ -282,6 +282,13 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 
 sleeper_players = load_sleeper_players()
 sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
+league_id = "1180202220087533568"  # or make this user input
+
+try:
+    team_rosters = get_sleeper_rosters(league_id)
+except Exception as e:
+    st.error(f"Failed to load Sleeper league rosters: {e}")
+    team_rosters = {}
 
 
 # Combine and sort
