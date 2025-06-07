@@ -213,6 +213,20 @@ player_names = sorted(set(list(roster_player_names) + rookies))
 
 tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Sleeper League Breakdown"])
 
+st.sidebar.subheader("📊 Stat Weight Settings")
+receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+rushing_yds_weight = st.sidebar.slider("Rushing Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+passing_yds_weight = st.sidebar.slider("Passing Yards Weight", 0.0, 0.1, 0.04, step=0.01)
+receptions_weight = st.sidebar.slider("Receptions Weight", 0.0, 2.0, 1.0, step=0.1)
+targets_weight = st.sidebar.slider("Targets Weight", 0.0, 1.0, 0.5, step=0.1)
+yac_weight = st.sidebar.slider("Yards After Catch (YAC) Weight", 0.0, 0.2, 0.05, step=0.01)
+
+# Touchdown sliders
+rec_tds_weight = st.sidebar.slider("Receiving TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+rush_tds_weight = st.sidebar.slider("Rushing TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+pass_tds_weight = st.sidebar.slider("Passing TDs Weight", 0.0, 10.0, 4.0, step=0.5)
+
+
 with tab1:
     st.title("Fantasy Football Player Comparison Tool")
 
@@ -393,20 +407,6 @@ with tab2:
         step=0.05,
         help="Controls how much age impacts a player's trade value. 0 = No age impact, 1 = Full influence"
     )
-
-    st.sidebar.subheader("📊 Stat Weight Settings")
-
-    receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
-    rushing_yds_weight = st.sidebar.slider("Rushing Yards Weight", 0.0, 0.2, 0.1, step=0.01)
-    passing_yds_weight = st.sidebar.slider("Passing Yards Weight", 0.0, 0.1, 0.04, step=0.01)
-    receptions_weight = st.sidebar.slider("Receptions Weight", 0.0, 2.0, 1.0, step=0.1)
-    targets_weight = st.sidebar.slider("Targets Weight", 0.0, 1.0, 0.5, step=0.1)
-    yac_weight = st.sidebar.slider("Yards After Catch (YAC) Weight", 0.0, 0.2, 0.05, step=0.01)
-
-    # Touchdown sliders
-    rec_tds_weight = st.sidebar.slider("Receiving TDs Weight", 0.0, 10.0, 6.0, step=0.5)
-    rush_tds_weight = st.sidebar.slider("Rushing TDs Weight", 0.0, 10.0, 6.0, step=0.5)
-    pass_tds_weight = st.sidebar.slider("Passing TDs Weight", 0.0, 10.0, 4.0, step=0.5)
 
     # Draft pick values (example scale, adjust as needed)
     draft_pick_values = {
@@ -644,16 +644,20 @@ with tab3:
                     team_value += rating
 
                     player_name = sleeper_players[sid].get('full_name', 'Unknown')
-                    player_summary.append(f"{player_name} ({int(rating)})")
+                    player_summary.append((player_name, rating))
 
                 except Exception as e:
                     st.warning(f"Error rating player {sid}: {e}")
+
+            # Sort players by rating descending, then format top 5
+            player_summary.sort(key=lambda x: x[1], reverse=True)
+            top_players_formatted = ", ".join(f"{name} ({int(rating)})" for name, rating in player_summary[:5])
 
             team_rankings.append({
                 "Owner": owner,
                 "Team Value": round(team_value, 2),
                 "Player Count": len(player_summary),
-                "Top Players": ", ".join(player_summary[:5]) + ("..." if len(player_summary) > 5 else "")
+                "Top Players": top_players_formatted
             })
 
         if team_rankings:
@@ -662,8 +666,10 @@ with tab3:
             st.subheader("Ranked Sleeper Rosters")
             st.dataframe(df_rankings, use_container_width=True)
 
+            st.subheader("Team Value Chart")
             st.bar_chart(df_rankings.set_index("Owner")["Team Value"])
         else:
-            st.info("No valid players found in rosters. Ensure the league has valid NFL players with GSIS IDs.")
+            st.info("No valid players found in rosters. Make sure the league has valid NFL players with GSIS IDs.")
+
     
     
