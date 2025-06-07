@@ -212,7 +212,7 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
 
-tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Dynasty Value Over Time"])
+tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Sleeper League"])
 
 st.sidebar.subheader("📊 Stat Weight Settings")
 receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
@@ -580,6 +580,13 @@ with tab2:
             }),
             use_container_width=True
         )
+with tab3:
+    st.title("🔐 Import Your Sleeper League")
+    username = st.text_input("Enter your Sleeper username")
+
+    if username and st.button("Load League"):
+        leagues = get_user_leagues(username)
+        # Let user select a league, then import rosters
 
     
     
