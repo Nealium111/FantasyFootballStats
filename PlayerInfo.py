@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import math
 import datetime
 from itertools import combinations, product, combinations_with_replacement
-import requests
 
 st.set_page_config(layout="wide")
+
+
 
 @st.cache_data
 def load_pbp(years):
@@ -33,44 +34,6 @@ def load_pbp(years):
 
     return df
 
-@st.cache_data
-def get_sleeper_players():
-    url = "https://api.sleeper.app/v1/players/nfl"
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch sleeper players: {response.status_code}")
-    return response.json()  # This is critical!
-
-
-
-# Map Sleeper player name or NFL ID to GSIS ID from your players dataframe
-def map_sleeper_to_gsis(sleeper_players, players_df):
-    mapping = {}
-    for spid, pdata in sleeper_players.items():
-        # Try to match by full name or other IDs if available
-        name = pdata.get('full_name')
-        # Match with your players dataframe display_name
-        match = players_df[players_df['display_name'] == name]
-        if not match.empty:
-            gsis_id = match.iloc[0]['gsis_id']
-            mapping[spid] = gsis_id
-        else:
-            # fallback or rookie, no match
-            mapping[spid] = None
-    return mapping
-
-def get_gsis_id_from_sleeper(sleeper_id, mapping):
-    return mapping.get(sleeper_id)
-    
-def get_sleeper_users(league_id):
-    url = f"https://api.sleeper.app/v1/league/{league_id}/users"
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch league users: {response.status_code}")
-    users = response.json()
-    return {user['user_id']: user.get('display_name') or user.get('username') or user['user_id'] for user in users}
-
-    
 # Load players data
 @st.cache_data
 def load_players():
@@ -112,24 +75,9 @@ else:
     st.warning("Please select at least one year.")
     st.stop()
 
-def get_sleeper_rosters(league_id):
-    url = f"https://api.sleeper.app/v1/league/{league_id}/rosters"
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch rosters: {response.status_code}")
-    
-    rosters = response.json()
-    team_rosters = {}
-    for roster in rosters:
-        team_id = roster.get('owner_id')
-        players = roster.get('players', [])
-        team_rosters[team_id] = players
-    
-    return team_rosters
 def get_player_id(name):
     return name_id_map.get(name, f"rookie_{name.replace(' ', '_').lower()}")
 
-@st.cache_data
 def calculate_player_rating_with_details(player_id, pbp, players, years, receiving_yds_weight, rushing_yds_weight, passing_yds_weight, receptions_weight, targets_weight, yac_weight, rec_tds_weight, rush_tds_weight, pass_tds_weight, age_weight):
     df_stat = pbp[
         (pbp['receiver_player_id'] == player_id) |
@@ -180,35 +128,6 @@ def calculate_player_rating_with_details(player_id, pbp, players, years, receivi
             pass_tds * pass_tds_weight
         )
 
-    # New: Trade evaluation using Sleeper rosters and player ratings
-def evaluate_trade_sleeper_rosters(team_rosters, team1_id, team2_id, trade_team1, trade_team2, mapping, **kwargs):
-    team1_players = set(team_rosters.get(team1_id, []))
-    team2_players = set(team_rosters.get(team2_id, []))
-
-    # Simulate trade
-    team1_after = (team1_players - set(trade_team1)) | set(trade_team2)
-    team2_after = (team2_players - set(trade_team2)) | set(trade_team1)
-
-    def team_value(player_ids):
-        total = 0
-        for spid in player_ids:
-            rating, *_ = calculate_player_rating_from_sleeper_id(spid, mapping, **kwargs)
-            total += rating
-        return total
-
-    before_1 = team_value(team1_players)
-    after_1 = team_value(team1_after)
-    before_2 = team_value(team2_players)
-    after_2 = team_value(team2_after)
-
-    return {
-        "team1_before": before_1,
-        "team1_after": after_1,
-        "team2_before": before_2,
-        "team2_after": after_2,
-        "team1_gain": after_1 - before_1,
-        "team2_gain": after_2 - before_2,
-    }
     # Age and age factor
     player_row = players[players['gsis_id'] == player_id]
     if player_row.empty or pd.isna(player_row.iloc[0]['birth_date']):
@@ -280,6 +199,7 @@ def compute_trade_value_detailed(slots):
                 })
     return total_value, player_details
 
+
 offensive_positions = ['QB', 'RB', 'WR', 'TE']
 offensive_rosters = rosters[rosters['position'].isin(offensive_positions)]
 offensive_players = players[players['position'].isin(offensive_positions)]
@@ -290,39 +210,10 @@ roster_player_names = offensive_rosters['player_name'].unique()
 # Rookies are in players but not in roster_player_names
 rookies = list(set(all_offensive_players) - set(roster_player_names))
 
-league_id = "1180202220087533568"  # or make this user input
-sleeper_players = get_sleeper_players()
-sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
-name_to_sleeper = {player['full_name']: player['player_id'] for player in sleeper_players if 'full_name' in player and 'player_id' in player}
-team_id_to_name = get_sleeper_users(league_id)
-player_id_to_name = {p['player_id']: p['full_name'] for p in sleeper_players}
-
-
-try:
-    team_rosters = get_sleeper_rosters(league_id)
-except Exception as e:
-    st.error(f"Failed to load Sleeper league rosters: {e}")
-    team_rosters = {}
-
-
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
 
-tab1,tab2,tab3=st.tabs(["Player Comparison", "Dynasty Trade Calculator", "Sleeper League"])
-
-st.sidebar.subheader("📊 Stat Weight Settings")
-receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
-rushing_yds_weight = st.sidebar.slider("Rushing Yards Weight", 0.0, 0.2, 0.1, step=0.01)
-passing_yds_weight = st.sidebar.slider("Passing Yards Weight", 0.0, 0.1, 0.04, step=0.01)
-receptions_weight = st.sidebar.slider("Receptions Weight", 0.0, 2.0, 1.0, step=0.1)
-targets_weight = st.sidebar.slider("Targets Weight", 0.0, 1.0, 0.5, step=0.1)
-yac_weight = st.sidebar.slider("Yards After Catch (YAC) Weight", 0.0, 0.2, 0.05, step=0.01)
-
-# Touchdown sliders
-rec_tds_weight = st.sidebar.slider("Receiving TDs Weight", 0.0, 10.0, 6.0, step=0.5)
-rush_tds_weight = st.sidebar.slider("Rushing TDs Weight", 0.0, 10.0, 6.0, step=0.5)
-pass_tds_weight = st.sidebar.slider("Passing TDs Weight", 0.0, 10.0, 4.0, step=0.5)
-
+tab1,tab2=st.tabs(["Player Comparison", "Dynasty Trade Calculator"])
 
 with tab1:
     st.title("Fantasy Football Player Comparison Tool")
@@ -505,6 +396,20 @@ with tab2:
         help="Controls how much age impacts a player's trade value. 0 = No age impact, 1 = Full influence"
     )
 
+    st.sidebar.subheader("📊 Stat Weight Settings")
+
+    receiving_yds_weight = st.sidebar.slider("Receiving Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+    rushing_yds_weight = st.sidebar.slider("Rushing Yards Weight", 0.0, 0.2, 0.1, step=0.01)
+    passing_yds_weight = st.sidebar.slider("Passing Yards Weight", 0.0, 0.1, 0.04, step=0.01)
+    receptions_weight = st.sidebar.slider("Receptions Weight", 0.0, 2.0, 1.0, step=0.1)
+    targets_weight = st.sidebar.slider("Targets Weight", 0.0, 1.0, 0.5, step=0.1)
+    yac_weight = st.sidebar.slider("Yards After Catch (YAC) Weight", 0.0, 0.2, 0.05, step=0.01)
+
+    # Touchdown sliders
+    rec_tds_weight = st.sidebar.slider("Receiving TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+    rush_tds_weight = st.sidebar.slider("Rushing TDs Weight", 0.0, 10.0, 6.0, step=0.5)
+    pass_tds_weight = st.sidebar.slider("Passing TDs Weight", 0.0, 10.0, 4.0, step=0.5)
+
     # Draft pick values (example scale, adjust as needed)
     draft_pick_values = {
         'Draft Pick: 1st Round': 200,
@@ -546,6 +451,7 @@ with tab2:
         return new_slots
 
 # === Show UI and compute ===
+
     trade_a = trade_side_ui("A", "side_a")
     trade_b = trade_side_ui("B", "side_b")
 
@@ -554,7 +460,7 @@ with tab2:
     ["1 Player", "2 Players", "1 Player + 1 Draft Pick", "2 Draft Picks"]
     )
     if st.button("Calculate Trade Values"):
-        valid_candidates = []
+
         value_a, details_a = compute_trade_value_detailed(trade_a)
         value_b, details_b = compute_trade_value_detailed(trade_b)
 
@@ -563,8 +469,11 @@ with tab2:
         with st.spinner("Loading recommendations..."):
             min_value_threshold = 100.0  # or whatever minimum rating you want
             if not any(trade_b):  # Only recommend if Side B is empty
+                from itertools import combinations
+
 
                 # Filter out rookies and Side A players
+                valid_candidates = []
                 for candidate in combined_options:
                     if candidate in trade_a or candidate == "":
                         continue
@@ -591,7 +500,13 @@ with tab2:
                     valid_picks.append((candidate, val))
                 else:
                     valid_players.append((candidate, val))
-                    
+
+            # Add user choice for recommendation type before this block:
+            # recommendation_type = st.selectbox(
+            #     "Choose recommendation type for Side B:",
+            #     ["1 Player", "2 Players", "1 Player + 1 Draft Pick"]
+            # )
+
             all_combos = []
 
             if recommendation_type == "1 Player":
@@ -627,11 +542,10 @@ with tab2:
 
             # Sort by difference to Side A
             all_combos = sorted(all_combos, key=lambda x: x[2])
-            if all_combos:
-                st.subheader("💡 Suggested Trade Combinations for Side B")
-                st.markdown("**Top 5 Closest Value Matches:**")
-                for names, total, diff in all_combos[:5]:
-                    st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
+            st.subheader("💡 Suggested Trade Combinations for Side B")
+            st.markdown("**Top 5 Closest Value Matches:**")
+            for names, total, diff in all_combos[:5]:
+                st.write(f"- {' + '.join(names)}: Total Value = {total:.1f} (Diff = {diff:.1f})")
 
         st.markdown("---")
         st.subheader("Details for Trade")
@@ -676,42 +590,3 @@ with tab2:
             }),
             use_container_width=True
         )
-with tab3:  # Sleeper League tab
-    st.header("Sleeper League Trade Evaluator")
-
-    # Example: Select team
-    team1_id = st.selectbox("Select Team 1", options=list(team_rosters.keys()), format_func=lambda x: team_id_to_name.get(x, x))
-    team2_id = st.selectbox("Select Team 2", options=list(team_rosters.keys()), format_func=lambda x: team_id_to_name.get(x, x))
-
-    # Get player names on these teams using name_to_sleeper and the roster
-    team1_players = [player_id_to_name.get(pid, pid) for pid in team_rosters[team1_id]]
-    team2_players = [player_id_to_name.get(pid, pid) for pid in team_rosters[team2_id]]
-
-    trade_team1_names = st.multiselect("Select Players from Team 1 to Trade", options=team1_players)
-    trade_team2_names = st.multiselect("Select Players from Team 2 to Trade", options=team2_players)
-
-    # Convert names to Sleeper IDs for evaluation
-    trade_team1_ids = [name_to_sleeper[name] for name in trade_team1_names]
-    trade_team2_ids = [name_to_sleeper[name] for name in trade_team2_names]
-
-    if st.button("Evaluate Trade"):
-        results = evaluate_trade_sleeper_rosters(
-            team_rosters, team1_id, team2_id, trade_team1_ids, trade_team2_ids, sleeper_to_gsis,
-            pbp=pbp, players=players, years=years,
-            receiving_yds_weight=receiving_yds_weight,
-            rushing_yds_weight=rushing_yds_weight,
-            passing_yds_weight=passing_yds_weight,
-            receptions_weight=receptions_weight,
-            targets_weight=targets_weight,
-            yac_weight=yac_weight,
-            rec_tds_weight=rec_tds_weight,
-            rush_tds_weight=rush_tds_weight,
-            pass_tds_weight=pass_tds_weight,
-            age_weight=age_weight
-        )
-        st.write("### Trade Evaluation Results")
-        st.write(results)
-
-    
-    
-    
