@@ -40,7 +40,7 @@ def load_sleeper_players():
     response.raise_for_status()
     return response.json()  # dict with keys = sleeper_player_id
 
-sleeper_players = load_sleeper_players()
+
 
 # Map Sleeper player name or NFL ID to GSIS ID from your players dataframe
 def map_sleeper_to_gsis(sleeper_players, players_df):
@@ -60,9 +60,7 @@ def map_sleeper_to_gsis(sleeper_players, players_df):
 
 def get_gsis_id_from_sleeper(sleeper_id, mapping):
     return mapping.get(sleeper_id)
-
-sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
-
+    
 # Load players data
 @st.cache_data
 def load_players():
@@ -284,6 +282,7 @@ rookies = list(set(all_offensive_players) - set(roster_player_names))
 
 sleeper_players = load_sleeper_players()
 sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
+
 
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
