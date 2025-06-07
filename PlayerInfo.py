@@ -33,6 +33,36 @@ def load_pbp(years):
 
     return df
 
+@st.cache_data
+def load_sleeper_players():
+    url = "https://api.sleeper.app/v1/players/nfl"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()  # dict with keys = sleeper_player_id
+
+sleeper_players = load_sleeper_players()
+
+# Map Sleeper player name or NFL ID to GSIS ID from your players dataframe
+def map_sleeper_to_gsis(sleeper_players, players_df):
+    mapping = {}
+    for spid, pdata in sleeper_players.items():
+        # Try to match by full name or other IDs if available
+        name = pdata.get('full_name')
+        # Match with your players dataframe display_name
+        match = players_df[players_df['display_name'] == name]
+        if not match.empty:
+            gsis_id = match.iloc[0]['gsis_id']
+            mapping[spid] = gsis_id
+        else:
+            # fallback or rookie, no match
+            mapping[spid] = None
+    return mapping
+
+def get_gsis_id_from_sleeper(sleeper_id, mapping):
+    return mapping.get(sleeper_id)
+
+sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
+
 # Load players data
 @st.cache_data
 def load_players():
@@ -74,6 +104,20 @@ else:
     st.warning("Please select at least one year.")
     st.stop()
 
+def get_sleeper_rosters(league_id):
+    url = f"https://api.sleeper.app/v1/league/1180202220087533568/rosters"
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch rosters: {response.status_code}")
+    
+    rosters = response.json()
+    team_rosters = {}
+    for roster in rosters:
+        team_id = roster.get('owner_id')
+        players = roster.get('players', [])
+        team_rosters[team_id] = players
+    
+    return team_rosters
 def get_player_id(name):
     return name_id_map.get(name, f"rookie_{name.replace(' ', '_').lower()}")
 
@@ -128,6 +172,35 @@ def calculate_player_rating_with_details(player_id, pbp, players, years, receivi
             pass_tds * pass_tds_weight
         )
 
+    # New: Trade evaluation using Sleeper rosters and player ratings
+def evaluate_trade_sleeper_rosters(team_rosters, team1_id, team2_id, trade_team1, trade_team2, mapping, **kwargs):
+    team1_players = set(team_rosters.get(team1_id, []))
+    team2_players = set(team_rosters.get(team2_id, []))
+
+    # Simulate trade
+    team1_after = (team1_players - set(trade_team1)) | set(trade_team2)
+    team2_after = (team2_players - set(trade_team2)) | set(trade_team1)
+
+    def team_value(player_ids):
+        total = 0
+        for spid in player_ids:
+            rating, *_ = calculate_player_rating_from_sleeper_id(spid, mapping, **kwargs)
+            total += rating
+        return total
+
+    before_1 = team_value(team1_players)
+    after_1 = team_value(team1_after)
+    before_2 = team_value(team2_players)
+    after_2 = team_value(team2_after)
+
+    return {
+        "team1_before": before_1,
+        "team1_after": after_1,
+        "team2_before": before_2,
+        "team2_after": after_2,
+        "team1_gain": after_1 - before_1,
+        "team2_gain": after_2 - before_2,
+    }
     # Age and age factor
     player_row = players[players['gsis_id'] == player_id]
     if player_row.empty or pd.isna(player_row.iloc[0]['birth_date']):
@@ -208,6 +281,9 @@ roster_player_names = offensive_rosters['player_name'].unique()
 
 # Rookies are in players but not in roster_player_names
 rookies = list(set(all_offensive_players) - set(roster_player_names))
+
+sleeper_players = load_sleeper_players()
+sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
 
 # Combine and sort
 player_names = sorted(set(list(roster_player_names) + rookies))
@@ -581,12 +657,22 @@ with tab2:
             use_container_width=True
         )
 with tab3:
-    st.title("🔐 Import Your Sleeper League")
-    username = st.text_input("Enter your Sleeper username")
+    league_id = st.text_input("Enter your Sleeper League ID", "1180202220087533568")
+    if league_id:
+        try:
+            team_rosters = get_sleeper_rosters(league_id)
+            st.success(f"Loaded {len(team_rosters)} teams from Sleeper league {league_id}")
+            
+            # Show teams and player counts
+            for team, players_list in team_rosters.items():
+                st.write(f"Team {team}: {len(players_list)} players")
 
-    if username and st.button("Load League"):
-        leagues = get_user_leagues(username)
-        # Let user select a league, then import rosters
+            # Select teams for trade evaluation
+            team_ids = list(team_rosters.keys())
+            team1_id = st.selectbox("Select Team 1", team_ids)
+            team2_id = st.selectbox("Select Team 2", team_ids)
+
+            # Simple UI to input traded players by
 
     
     
