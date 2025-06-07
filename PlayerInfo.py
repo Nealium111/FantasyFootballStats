@@ -584,12 +584,13 @@ with tab3:
     st.title("📈 Fantasy Value Over Time")
     st.markdown("Track player fantasy value over time based on your custom scoring settings.")
 
-    selected_players_tab4 = st.multiselect("Select Players to Track", player_names)
+    selected_players_tab3 = st.multiselect("Select Players to Track", player_names)
 
-    if not selected_players_tab4:
+    if not selected_players_tab3:
         st.info("Please select at least one player to display value trends.")
-        if selected_players_tab4:
-        fig, ax = plt.subplots(figsize=(12, 6))
+        
+    if selected_players_tab3:
+            fig, ax = plt.subplots(figsize=(12, 6))
 
         all_weeks = sorted(pbp[['season', 'week']].drop_duplicates().values.tolist())
 
