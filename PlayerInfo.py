@@ -61,6 +61,15 @@ def map_sleeper_to_gsis(sleeper_players, players_df):
 def get_gsis_id_from_sleeper(sleeper_id, mapping):
     return mapping.get(sleeper_id)
     
+def get_sleeper_users(league_id):
+    url = f"https://api.sleeper.app/v1/league/{league_id}/users"
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch league users: {response.status_code}")
+    users = response.json()
+    return {user['user_id']: user.get('display_name') or user.get('username') or user['user_id'] for user in users}
+
+    
 # Load players data
 @st.cache_data
 def load_players():
@@ -280,10 +289,13 @@ roster_player_names = offensive_rosters['player_name'].unique()
 # Rookies are in players but not in roster_player_names
 rookies = list(set(all_offensive_players) - set(roster_player_names))
 
+league_id = "1180202220087533568"  # or make this user input
 sleeper_players = load_sleeper_players()
 sleeper_to_gsis = map_sleeper_to_gsis(sleeper_players, players)
 name_to_sleeper = {player['full_name']: player['player_id'] for player in sleeper_players if 'full_name' in player and 'player_id' in player}
-league_id = "1180202220087533568"  # or make this user input
+team_id_to_name = get_sleeper_users(league_id)
+player_id_to_name = {p['player_id']: p['full_name'] for p in sleeper_players}
+
 
 try:
     team_rosters = get_sleeper_rosters(league_id)
@@ -667,12 +679,12 @@ with tab3:  # Sleeper League tab
     st.header("Sleeper League Trade Evaluator")
 
     # Example: Select team
-    team1_id = st.selectbox("Select Team 1", options=list(team_rosters.keys()))
-    team2_id = st.selectbox("Select Team 2", options=list(team_rosters.keys()))
+    team1_id = st.selectbox("Select Team 1", options=list(team_rosters.keys()), format_func=lambda x: team_id_to_name.get(x, x))
+    team2_id = st.selectbox("Select Team 2", options=list(team_rosters.keys()), format_func=lambda x: team_id_to_name.get(x, x))
 
     # Get player names on these teams using name_to_sleeper and the roster
-    team1_players = [p for p in name_to_sleeper.keys() if name_to_sleeper[p] in team_rosters[team1_id]]
-    team2_players = [p for p in name_to_sleeper.keys() if name_to_sleeper[p] in team_rosters[team2_id]]
+    team1_players = [player_id_to_name.get(pid, pid) for pid in team_rosters[team1_id]]
+    team2_players = [player_id_to_name.get(pid, pid) for pid in team_rosters[team2_id]]
 
     trade_team1_names = st.multiselect("Select Players from Team 1 to Trade", options=team1_players)
     trade_team2_names = st.multiselect("Select Players from Team 2 to Trade", options=team2_players)
