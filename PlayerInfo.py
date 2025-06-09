@@ -460,7 +460,7 @@ with tab2:
     ["1 Player", "2 Players", "1 Player + 1 Draft Pick", "2 Draft Picks"]
     )
     if st.button("Calculate Trade Values"):
-
+        valid_candidates = []
         value_a, details_a = compute_trade_value_detailed(trade_a)
         value_b, details_b = compute_trade_value_detailed(trade_b)
 
@@ -473,7 +473,6 @@ with tab2:
 
 
                 # Filter out rookies and Side A players
-                valid_candidates = []
                 for candidate in combined_options:
                     if candidate in trade_a or candidate == "":
                         continue
